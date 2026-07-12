@@ -1,4 +1,4 @@
-%%writefile README.md
+https://suspicious-app-detection-system-ey5napb2zdl6exvqdsgchb.streamlit.app/
 # 🛡️ Account Takeover & Fraud Detection System
 
 An interactive Machine Learning web application built with **Streamlit** and **K-Nearest Neighbors (KNN)** to detect suspicious user logins and account takeover attempts in real time.
