@@ -1,54 +1,110 @@
 import streamlit as st
-import joblib
+
+st.markdown("""
+<style>
+    /* 1. Makes the app layout clean and centered on screen */
+    .main .block-container {
+        max-width: 1000px;
+        padding-top: 2rem;
+    }
+
+    /* 2. Styles big result numbers (Metrics) to be bold and dark blue */
+    [data-testid="stMetricValue"] {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #1E3A8A;
+    }
+
+    /* 3. Styles metric labels (titles above the numbers) */
+    [data-testid="stMetricLabel"] {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #4B5563;
+    }
+
+    /* 4. Makes primary buttons look clean with rounded corners */
+    .stButton > button {
+        border-radius: 8px;
+        font-weight: bold;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
+
+import warnings
+import pandas as pd
 import numpy as np
+import joblib
 
-# Page setup
-st.set_page_config(page_title="Security Anomaly Detector", page_icon="🛡️")
+#Hide the scikit-learn version mismatch warning in terminal
+warnings.filterwarnings('ignore', category=UserWarning)
 
-# Load saved model and scaler
+
+
+#Page Configuration
+st.set_page_config(
+    page_title="Account Takeover Detector",
+    page_icon="🔒",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+
+
+
+#Load Model and Scaler
+
 @st.cache_resource
-def load_artifacts():
-    model = joblib.load('knn_model.pkl')
+def load_artifacts(): 
+    Knn_model = joblib.load('knn_model.pkl')
     scaler = joblib.load('scaler.pkl')
-    return model, scaler
+    return Knn_model, scaler
 
-try:
-    knn, scaler = load_artifacts()
+Knn_model, scaler = load_artifacts()
 
-    st.title("🛡️ Suspicious Login Detection System")
-    st.write("Enter session parameters to evaluate account activity risk using KNN.")
-    st.divider()
+#App Title & Subtitle
+st.title("🔒 Suspicious Login Detection System")
+st.write("Enter session parameters below to evaluate user activity risk.")
+st.divider()
 
-    col1, col2 = st.columns(2)
-    with col1:
-        login_attempts = st.number_input("Login Attempts", min_value=1, max_value=50, value=2)
-        session_duration = st.number_input("Session Duration (sec)", min_value=1, max_value=3600, value=20)
-    with col2:
-        pages_accessed = st.number_input("Pages Accessed", min_value=1, max_value=1000, value=15)
-        failed_logins = st.number_input("Failed Logins", min_value=0, max_value=50, value=0)
+#Input Controls
+col1, col2 = st.columns(2)
 
-    st.divider()
+with col1:
+    login_attempts = st.number_input("Login Attempts", min_value=0, value=0)
+    session_duration = st.number_input("Session Duration (seconds)", min_value=0, value=120)
 
-    if st.button("Analyze Activity Risk", type="primary", use_container_width=True):
-        input_features = np.array([[login_attempts, session_duration, pages_accessed, failed_logins]])
-        scaled_features = scaler.transform(input_features)
+with col2:
+    pages_accessed = st.number_input("Pages Accessed", min_value=0, value=0)
+    failed_logins = st.number_input("Failed Logins", min_value=0, value=0)
 
-        prediction = knn.predict(scaled_features)[0]
-        probabilities = knn.predict_proba(scaled_features)[0]
+st.divider()
 
-        normal_prob = probabilities[0] * 100
-        suspicious_prob = probabilities[1] * 100
+#Prediction Button
+if st.button("Predict User Activity Risk", type="primary", use_container_width=True):
+    
+    
 
-        if prediction == 0:
-            st.success(f"✅ **Normal User Activity** (Confidence: {normal_prob:.1f}%)")
-        else:
-            st.error(f"🚨 **Suspicious Activity Flagged!** (Confidence: {suspicious_prob:.1f}%)")
+# Passing Pandas DataFrame with original feature names
+    feature_names = ["login_attempts", "session_duration", "pages_accessed", "failed_logins"] # Make sure these match your training dataset exact names!
+    input_data = pd.DataFrame([[login_attempts, session_duration, pages_accessed, failed_logins]], columns=feature_names)
 
-        col_a, col_b = st.columns(2)
-        col_a.metric("Normal Class Probability", f"{normal_prob:.1f}%")
-        col_b.metric("Suspicious Class Probability", f"{suspicious_prob:.1f}%")
+    scaled_data = scaler.transform(input_data)
+    
+    
+    # Predict class and probability
+    prediction = Knn_model.predict(scaled_data)[0]
+    probabilities = Knn_model.predict_proba(scaled_data)[0]
 
-except Exception as e:
-    st.error(f"Error loading model files: {e}")
-    st.info("Make sure 'knn_model.pkl' and 'scaler.pkl' are saved in your Colab files!")
-    col_b.metric("Suspicious Class Probability", f"{suspicious_prob:.1f}%")
+
+## Display User Activity Results
+    if prediction == 1:
+        st.error("⚠️ **High Risk Detected!** This session is suspicious.")
+    else:
+        st.success("✅ ** Normal Activity:**  This session appears safe and authentic.")
+
+# Show Risk Scores using Metrics
+    m1, m2 = st.columns(2)
+    m1.metric("Safe Probability", f"{probabilities[0]*100:.1f}%")
+    m2.metric("Risk Probability", f"{probabilities[1]*100:.1f}%")
