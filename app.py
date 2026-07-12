@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.markdown(
+st.markdown("""
 <style>
     /* 1. Makes the app layout clean and centered on screen */
     .main .block-container {
@@ -28,7 +28,7 @@ st.markdown(
         font-weight: bold;
     }
 </style>
-, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 
 
